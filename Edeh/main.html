@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>ملعبك بين يديك - حجز المباريات</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      margin: 0;
+      padding: 0;
+      background: #f7f7f7;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2, h3 {
+      margin: 10px 0;
+      text-align: center;
+    }
+    hr {
+      margin: 20px 0;
+      border: none;
+      border-top: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .booking-form div {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="time"] {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .delete-btn {
+      background-color: #e74c3c;
+    }
+    .delete-btn:hover {
+      background-color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="color: #2c3e50;">ملعبك بين يديك</h2>
+    <hr>
+    <h3 style="color: #e74c3c;">المواعيد المحجوزة</h3>
+    <div id="bookingsTable">
+      <!-- سيتم عرض جدول الحجوزات هنا -->
+    </div>
+    <hr>
+    <div class="booking-form">
+      <h3>حجز مباراة</h3>
+      <form id="bookingForm">
+        <div>
+          <label>ادخل اسمك:</label>
+          <input type="text" name="user" required>
+        </div>
+        <div>
+          <label>ادخل رقم هاتفك:</label>
+          <input type="text" name="phone" required>
+        </div>
+        <div>
+          <label>ادخل بريدك الإلكتروني:</label>
+          <input type="email" name="email" required>
+        </div>
+        <div>
+          <label>ادخل الوقت الذي تريد الحجز فيه (مثال: 15:00):</label>
+          <input type="time" name="time" required>
+        </div>
+        <button type="submit">حجز</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // المتغيرات الأساسية
+    const ADMIN_EMAIL = "edehwww@gmail.com";
+    let bookings = [];
+    let currentUserEmail = prompt("أدخل بريدك الإلكتروني لمشاهدة الحجوزات:");
+
+    // وظيفة لإزالة الحجوزات المنتهية (أكثر من 24 ساعة)
+    function removeExpiredBookings() {
+      const now = Date.now();
+      bookings = bookings.filter(booking => now - booking.created_at < 24 * 60 * 60 * 1000);
+    }
+
+    // تحديث جدول الحجوزات
+    function updateBookingsTable() {
+      removeExpiredBookings();
+      const bookingsDiv = document.getElementById("bookingsTable");
+      if (bookings.length === 0) {
+        bookingsDiv.innerHTML = '<p style="text-align: center; color: #3498db;">لا يوجد حجوزات حتى الآن</p>';
+        return;
+      }
+      let tableHTML = '<table><tr><th>الاسم</th><th>رقم الهاتف</th><th>البريد الإلكتروني</th><th>الوقت</th><th>إجراء</th></tr>';
+      bookings.forEach((booking, index) => {
+        // عرض زر الحذف فقط للمسؤول
+        let actionHTML = "🚫";
+        if (currentUserEmail === ADMIN_EMAIL) {
+          actionHTML = `<button class="delete-btn" onclick="deleteBooking(${index})">❌ حذف</button>`;
+        }
+        tableHTML += `<tr>
+                        <td>${booking.user}</td>
+                        <td>${booking.phone}</td>
+                        <td>${booking.email}</td>
+                        <td>${booking.time}</td>
+                        <td>${actionHTML}</td>
+                      </tr>`;
+      });
+      tableHTML += '</table>';
+      bookingsDiv.innerHTML = tableHTML;
+    }
+
+    // وظيفة حذف حجز (للتحقق من صلاحية المستخدم)
+    function deleteBooking(index) {
+      if (currentUserEmail === ADMIN_EMAIL) {
+        bookings.splice(index, 1);
+        alert("تم حذف الحجز بنجاح!");
+        updateBookingsTable();
+      } else {
+        alert("❌ ليس لديك صلاحية لحذف الحجوزات!");
+      }
+    }
+
+    // التعامل مع نموذج الحجز
+    document.getElementById("bookingForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      removeExpiredBookings();
+      const formData = new FormData(e.target);
+      const newBooking = {
+        user: formData.get("user"),
+        phone: formData.get("phone"),
+        email: formData.get("email"),
+        time: formData.get("time"),
+        created_at: Date.now()
+      };
+      // التحقق من تكرار الحجز لنفس الوقت
+      const isTimeTaken = bookings.some(booking => booking.time === newBooking.time);
+      if (isTimeTaken) {
+        alert("هذا الوقت محجوز بالفعل، يرجى اختيار وقت آخر!");
+        return;
+      }
+      bookings.push(newBooking);
+      alert(`شكراً ${newBooking.user} على الحجز في الساعة ${newBooking.time}!`);
+      e.target.reset();
+      updateBookingsTable();
+    });
+
+    // تحديث الجدول عند تحميل الصفحة
+    updateBookingsTable();
+  </script>
+</body>
+</html>
